@@ -1,80 +1,68 @@
 import os
 import time
-import tkinter as tk
-from tkinter import messagebox
-from robodk.robolink import *
+from math import radians, degrees, pi
+from robodk.robolink import Robolink
 from robodk.robomath import *
 
 # Define relative path to the .rdk file
-relative_path = "src/roboDK/Assistive_UR5e.rdk"
+relative_path = "src/roboDK/Pick&Place_UR5e.rdk"
 absolute_path = os.path.abspath(relative_path)
 
 # Start RoboDK with the project file
 RDK = Robolink()
 RDK.AddFile(absolute_path)
 
-# Retrieve items from the RoboDK station
+# Robot setup
 robot = RDK.Item("UR5e")
 base = RDK.Item("UR5e Base")
-tool = RDK.Item("Hand")
+tool = RDK.Item("2FG7")
 Init_target = RDK.Item("Init")
-App_shake_target = RDK.Item("App_shake")
-Shake_target = RDK.Item("Shake")
-App_give5_target = RDK.Item("App_give5")
-Give5_target = RDK.Item("Give5")
+App_pick_target = RDK.Item("App_Pick")
+Pick_target = RDK.Item("Pick")
+App_place_target = RDK.Item("App_Place")
+Place_target = RDK.Item("Place")
+table = RDK.Item("Table")
+cube = RDK.Item("Cube")
 
-# Set robot frame, tool and speed
+cube.setVisible(False)
+cube_POSE = Pick_target.Pose()
+cube.setParent(table)  # Do not maintain the actual absolute POSE
+cube.setPose(cube_POSE)
+cube.setVisible(True)
+
 robot.setPoseFrame(base)
 robot.setPoseTool(tool)
-robot.setSpeed(20)
+robot.setSpeed(80)
 
-# Move to initial position
-def move_to_init():
+def Init():
     print("Init")
     robot.MoveL(Init_target, True)
     print("Init_target REACHED")
 
-# Perform handshake sequence
-def hand_shake():
-    print("Hand Shake")
-    robot.MoveL(App_shake_target, True)
-    robot.MoveL(Shake_target, True)
-    robot.MoveL(App_shake_target, True)
-    print("Hand Shake FINISHED")
+def Pick():
+    print("Pick")
+    robot.MoveL(App_pick_target,True)
+    robot.setSpeed(10)
+    robot.MoveL(Pick_target,True)
+    cube.setParentStatic(tool)  # Maintain the actual absolute POSE
+    robot.MoveL(App_pick_target, True)
+    print("Pick FINISHED")
 
-# Perform "Give me 5" sequence
-def give_me_5():
-    print("Give me 5!")
-    robot.MoveL(App_give5_target, True)
-    robot.MoveL(Give5_target, True)
-    robot.MoveL(App_give5_target, True)
-    print("Give me 5! FINISHED")
+def Place():
+    print("Place")
+    robot.setSpeed(40)
+    robot.MoveL(App_place_target, True)
+    robot.setSpeed(10)
+    robot.MoveL(Place_target, True)
+    cube.setParentStatic(table)  # Suelta el cubo en la mesa
+    robot.MoveL(App_place_target, True)
+    print("Place FINISHED")
 
-# Main sequence
+# Main function
 def main():
-    move_to_init()
-    hand_shake()
-    give_me_5()
-    move_to_init()
+    Init()
+    Pick()
+    Place()
 
-# Confirmation dialog to close RoboDK
-def confirm_close():
-    root = tk.Tk()
-    root.withdraw()
-    response = messagebox.askquestion(
-        "Close RoboDK",
-        "Do you want to save changes before closing RoboDK?",
-        icon='question'
-    )
-    if response == 'yes':
-        RDK.Save()
-        RDK.CloseRoboDK()
-        print("RoboDK saved and closed.")
-    else:
-        RDK.CloseRoboDK()
-        print("RoboDK closed without saving.")
-
-# Run main and handle closing
 if __name__ == "__main__":
     main()
-    #confirm_close()
